@@ -1,0 +1,5 @@
+{
+  "name": "Ad Vault",
+  "description": "Watch ads, complete tasks, and earn coins to redeem for exciting rewards.",
+  "requestFramePermissions": ["camera"]
+}
