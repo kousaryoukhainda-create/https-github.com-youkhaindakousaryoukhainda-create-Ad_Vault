@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   TrendingUp, 
@@ -21,6 +21,7 @@ import { ProfilePicModal } from './components/ProfilePicModal';
 import { Login } from './components/Login';
 import { useCoins } from './hooks/useCoins';
 import { cn } from './utils/cn';
+import { AdMobService } from './services/admobService';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
@@ -38,7 +39,11 @@ export default function App() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(true);
 
-  const handleWatchAd = () => {
+  useEffect(() => {
+    AdMobService.initialize();
+  }, []);
+
+  const handleWatchAd = async () => {
     // Check daily limit before starting
     if (stats.adsWatched >= 20) {
       showToast("You've reached your daily ad limit. Come back tomorrow!", 'error');
@@ -47,20 +52,22 @@ export default function App() {
 
     setIsAdLoading(true);
     
-    // Simulate ad loading delay
-    setTimeout(() => {
-      // 10% chance of "ad loading failure"
-      if (Math.random() < 0.1) {
-        setIsAdLoading(false);
-        showToast("Failed to load ad. Please check your connection and try again.", 'error');
-        return;
-      }
-
-      const reward = Math.floor(Math.random() * 50) + 10;
-      setCurrentAdReward(reward);
+    try {
+      const reward = await AdMobService.showRewardedAd();
       setIsAdLoading(false);
-      setIsAdOpen(true);
-    }, 1500);
+      
+      if (reward) {
+        const rewardAmount = Math.floor(Math.random() * 50) + 10;
+        const result = watchAd(rewardAmount);
+        showToast(result.message, result.success ? 'success' : 'error');
+      } else {
+        showToast("Ad was dismissed. No reward earned.", 'error');
+      }
+    } catch (error) {
+      setIsAdLoading(false);
+      console.error('AdMob Error:', error);
+      showToast("Failed to load ad. Please try again later.", 'error');
+    }
   };
 
   const handleAdComplete = () => {
