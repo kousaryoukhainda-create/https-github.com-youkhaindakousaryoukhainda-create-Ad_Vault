@@ -22,6 +22,7 @@ import { Login } from './components/Login';
 import { useCoins } from './hooks/useCoins';
 import { cn } from './utils/cn';
 import { AdMobService } from './services/admobService';
+import { Capacitor } from '@capacitor/core';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
@@ -40,7 +41,10 @@ export default function App() {
   const [darkModeEnabled, setDarkModeEnabled] = useState(true);
 
   useEffect(() => {
-    AdMobService.initialize();
+    const platform = Capacitor.getPlatform();
+    if (platform === 'android' || platform === 'ios') {
+      AdMobService.initialize();
+    }
   }, []);
 
   const handleWatchAd = async () => {
@@ -50,23 +54,37 @@ export default function App() {
       return;
     }
 
-    setIsAdLoading(true);
+    const platform = Capacitor.getPlatform();
     
-    try {
-      const reward = await AdMobService.showRewardedAd();
-      setIsAdLoading(false);
-      
-      if (reward) {
-        const rewardAmount = Math.floor(Math.random() * 50) + 10;
-        const result = watchAd(rewardAmount);
-        showToast(result.message, result.success ? 'success' : 'error');
-      } else {
-        showToast("Ad was dismissed. No reward earned.", 'error');
+    if (platform === 'android' || platform === 'ios') {
+      setIsAdLoading(true);
+      try {
+        const reward = await AdMobService.showRewardedAd();
+        setIsAdLoading(false);
+        
+        if (reward) {
+          const rewardAmount = Math.floor(Math.random() * 50) + 10;
+          const result = watchAd(rewardAmount);
+          showToast(result.message, result.success ? 'success' : 'error');
+        } else {
+          showToast("Ad was dismissed. No reward earned.", 'error');
+        }
+      } catch (error) {
+        setIsAdLoading(false);
+        console.error('AdMob Error:', error);
+        showToast("Failed to load ad. Please try again later.", 'error');
       }
-    } catch (error) {
-      setIsAdLoading(false);
-      console.error('AdMob Error:', error);
-      showToast("Failed to load ad. Please try again later.", 'error');
+    } else {
+      // Fallback for Web/Preview
+      setIsAdLoading(true);
+      
+      // Simulate ad loading delay
+      setTimeout(() => {
+        const reward = Math.floor(Math.random() * 50) + 10;
+        setCurrentAdReward(reward);
+        setIsAdLoading(false);
+        setIsAdOpen(true);
+      }, 1500);
     }
   };
 
